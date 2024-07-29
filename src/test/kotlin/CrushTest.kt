@@ -41,56 +41,51 @@ class CrushTest {
 
         private fun handle(from: Int, to: Int, newValue: Int): List<MyRange> {
 
-            return when {
+           val l =  when {
 //                opcja 2
                 from <= range.first && to >= range.last -> {
 
                     val l = listOf(
-                        MyRange(from..<range.first, newValue.toLong()),
+                        MyRange(from.rangeTo(range.first-1), newValue.toLong()),
                         MyRange(range, this.value + newValue.toLong()),
-                        MyRange(range.last + 1..to, newValue.toLong())
+                        MyRange((range.last + 1).rangeTo(to), newValue.toLong())
                     )
-                    val res = l.filter { !it.range.isEmpty() }.filter { it.value > 0 }
-                    res
+                    l
                 }
 
                 //opcja 3
                 range.contains(from) && range.contains(to) -> {
                     val l = listOf(
-                        MyRange(range.first..<from, this.value),
-                        MyRange(from ..to, this.value + newValue),
-                        MyRange(to + 1..range.last, this.value)
+                        MyRange(range.first.rangeTo(from-1), this.value),
+                        MyRange(from.rangeTo(to), this.value + newValue),
+                        MyRange((to + 1).rangeTo(range.last), this.value)
                     )
-
-                    val res = l.filter { !it.range.isEmpty() }.filter { it.value > 0 }
-                    res
-
+                    l
                 }
 //                opcja 4
                 from > range.first && to > range.last -> {
 
                     val l = listOf(
-                        MyRange(range.first..<from, value),
-                        MyRange(from..range.last, this.value + newValue.toLong()),
-                        MyRange(range.last + 1..to, newValue.toLong())
+                        MyRange(range.first.rangeTo(from-1), value),
+                        MyRange(from.rangeTo(range.last), this.value + newValue.toLong()),
+                        MyRange((range.last + 1).rangeTo(to-1), newValue.toLong())
                     )
-                    val res = l.filter { !it.range.isEmpty() }.filter { it.value > 0 }
-                    res
+                    l
                 }
 //                opcja 5
                 from < range.first && to >= range.first -> {
 
                     val l = listOf(
-                        MyRange(from..<range.first, newValue.toLong()),
-                        MyRange(range.first..to, this.value + newValue.toLong()),
-                        MyRange(to + 1..range.last, value)
+                        MyRange(from.rangeTo(range.first-1), newValue.toLong()),
+                        MyRange(range.first.rangeTo(to), this.value + newValue.toLong()),
+                        MyRange((to + 1).rangeTo(range.last), value)
                     )
-                    val res = l.filter { !it.range.isEmpty() }.filter { it.value > 0 }
-                    res
+                    l
                 }
+
                 else -> throw IllegalArgumentException("Invalid input")
             }
-
+            return  l.filter { !it.range.isEmpty() }.filter { it.value > 0 }
         }
 
         private fun areSeparated(from: Int, to: Int): Boolean =
@@ -112,7 +107,7 @@ class CrushTest {
 
                 Arguments.of(
                     5,
-                    arrayOf(arrayOf(1, 2, 100), arrayOf(2, 5, 100),arrayOf(3, 4, 100) ),
+                    arrayOf(arrayOf(1, 2, 100), arrayOf(2, 5, 100), arrayOf(3, 4, 100)),
                     200L
                 ),
 
@@ -146,8 +141,7 @@ class CrushTest {
                 ),
 
 
-
-            );
+                );
         }
 
     }
