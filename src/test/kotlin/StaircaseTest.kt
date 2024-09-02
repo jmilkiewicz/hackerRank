@@ -10,7 +10,7 @@ class StaircaseTest {
     @ParameterizedTest(name = "{index} for {0} biggest is {1}")
     @MethodSource("provideStringsForIsBlank")
     fun test(depth: Int, expected: List<String>) {
-        assertThat(app(depth), Matchers.`is`(expected))
+        assertThat(app2(depth), Matchers.`is`(expected))
     }
 
     fun staircase(n: Int): Unit {
@@ -20,8 +20,15 @@ class StaircaseTest {
     fun app(n: Int): List<String> = (1..n)
         .map {
             val howManySpaces = (n - it)
-            " ".repeat(howManySpaces) + "#".repeat(n-howManySpaces)
+            " ".repeat(howManySpaces) + "#".repeat(n - howManySpaces)
         }
+
+
+    fun app2(n: Int): List<String> {
+        val sequence = generateSequence(" ".repeat(n-1) + "#") { prev -> prev.drop(1) + "#" }
+        return sequence.take(n).toList()
+
+    }
 
 
     companion object {
