@@ -173,69 +173,58 @@ class TennisGameStateTest {
     }
 
     class NormalGame : GameState() {
-        // TODO  p1WonBall i p2WonBall mnóstow duplikacji
-
         override fun p1WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            when (gameResult.currentGemResult) {
-                is NormalGameResult -> {
-                    val currentSetResult: NormalGameResult = gameResult.currentGemResult
-                    when (currentSetResult.playerOne) {
-                        GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
-                            val newScore = GemScore.entries[currentSetResult.playerOne.ordinal + 1]
-                            if (isDeuce(newScore, currentSetResult.playerTwo)) {
-                                gameResult.copy(currentGemResult = Deuce) to DeuceGame()
-                            } else {
-                                gameResult.copy(
-                                    currentGemResult =
-                                        NormalGameResult(
-                                            newScore,
-                                            currentSetResult.playerTwo,
-                                        ),
-                                ) to this
-                            }
+            aaa(
+                gameResult,
+                { normalGameResult -> normalGameResult.playerOne },
+                { normalGameResult -> normalGameResult.playerTwo },
+                { winnerNewResult, looserResult -> NormalGameResult(winnerNewResult, looserResult) },
+                { setScore -> setScore.playerOneWinsGem() },
+            )
+
+        // TODO to jest b skomplikowane. Problemem jest że muismy wskazać winner i (explicite) loosera oraz powtórzyć to
+        // dla newGemResult(bo to potrzbuje kolejności: player1 ,player2)  oraz increaseGem
+        private fun aaa(
+            gameResult: MatchResult,
+            ballWinnerCurrentResult: (NormalGameResult) -> GemScore,
+            ballLooserCurrentResult: (NormalGameResult) -> GemScore,
+            newGemResult: (winnerResult: GemScore, looserResult: GemScore) -> NormalGameResult,
+            increaseGem: (SetScore) -> SetScore,
+        ) = when (gameResult.currentGemResult) {
+            is NormalGameResult -> {
+                val currentSetResult: NormalGameResult = gameResult.currentGemResult
+                when (val ballWinnerCurrentResult1 = ballWinnerCurrentResult(currentSetResult)) {
+                    GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
+                        val newScore = GemScore.entries[ballWinnerCurrentResult1.ordinal + 1]
+                        if (isDeuce(newScore, ballLooserCurrentResult(currentSetResult))) {
+                            gameResult.copy(currentGemResult = Deuce) to DeuceGame()
+                        } else {
+                            gameResult.copy(
+                                currentGemResult =
+                                    newGemResult(newScore, ballLooserCurrentResult(currentSetResult)),
+                            ) to this
                         }
-
-                        GemScore.FORTY ->
-                            onGemWon(
-                                gameResult.completedSets,
-                                gameResult.currentSetScore.playerOneWinsGem(),
-                            )
                     }
-                }
 
-                else -> gameResult to this
+                    GemScore.FORTY ->
+                        onGemWon(
+                            gameResult.completedSets,
+                            increaseGem(gameResult.currentSetScore),
+                        )
+                }
             }
+
+            else -> gameResult to this
+        }
 
         override fun p2WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            when (gameResult.currentGemResult) {
-                is NormalGameResult -> {
-                    val currentSetResult: NormalGameResult = gameResult.currentGemResult
-                    when (currentSetResult.playerTwo) {
-                        GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
-                            val newScore = GemScore.entries[currentSetResult.playerTwo.ordinal + 1]
-                            if (isDeuce(currentSetResult.playerOne, newScore)) {
-                                gameResult.copy(currentGemResult = Deuce) to DeuceGame()
-                            } else {
-                                gameResult.copy(
-                                    currentGemResult =
-                                        NormalGameResult(
-                                            currentSetResult.playerOne,
-                                            newScore,
-                                        ),
-                                ) to this
-                            }
-                        }
-
-                        GemScore.FORTY ->
-                            onGemWon(
-                                gameResult.completedSets,
-                                gameResult.currentSetScore.playerTwoWinsGem(),
-                            )
-                    }
-                }
-
-                else -> gameResult to this
-            }
+            aaa(
+                gameResult,
+                { normalGameResult -> normalGameResult.playerTwo },
+                { normalGameResult -> normalGameResult.playerOne },
+                { winnerNewResult, looserResult -> NormalGameResult(looserResult, winnerNewResult) },
+                { setScore -> setScore.playerTwoWinsGem() },
+            )
 
         private fun isDeuce(
             playerOne: GemScore,
