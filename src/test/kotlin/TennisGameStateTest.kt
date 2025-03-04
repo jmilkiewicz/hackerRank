@@ -48,8 +48,8 @@ class TennisGameStateTest {
     data class CompletedSets(
         val completedSets: List<SetScore> = emptyList(),
     ) {
-        val setsWonByPlayerOne = completedSets.count { it.isSetWonByPlayerOne() }
-        val setsWonByPlayerTwo = completedSets.count { it.isSetWonByPlayerTwo() }
+        private val setsWonByPlayerOne = completedSets.count { it.isSetWonByPlayerOne() }
+        private val setsWonByPlayerTwo = completedSets.count { it.isSetWonByPlayerTwo() }
 
         fun append(newCompletedSet: SetScore): CompletedSets = this.copy(completedSets + newCompletedSet)
 
@@ -60,18 +60,16 @@ class TennisGameStateTest {
 
     data class MatchResult(
         val completedSets: CompletedSets = CompletedSets(),
-        val currentSetResult: GameResult = NormalGameResult(GemScore.ZERO, GemScore.ZERO),
+        val currentSetScore: SetScore = SetScore(),
+        val currentGemResult: GameResult = NormalGameResult(GemScore.ZERO, GemScore.ZERO),
     )
 
-    sealed class GameResult(
-        open val currentSetScore: SetScore,
-    )
+    sealed class GameResult
 
     data class TieBreak(
-        override val currentSetScore: SetScore,
         val playerOne: Int,
         val playerTwo: Int,
-    ) : GameResult(currentSetScore) {
+    ) : GameResult() {
         fun isCompleted(): Boolean = Math.abs(playerOne - playerTwo) > 1 && (playerOne >= 7 || playerTwo >= 7)
 
         fun playerOneWinsPoint(): TieBreak = this.copy(playerOne = playerOne + 1)
@@ -82,29 +80,15 @@ class TennisGameStateTest {
     data class NormalGameResult(
         val playerOne: GemScore,
         val playerTwo: GemScore,
-        override val currentSetScore: SetScore = SetScore(),
-    ) : GameResult(currentSetScore)
+    ) : GameResult()
 
-    data class Deuce(
-        override val currentSetScore: SetScore,
-    ) : GameResult(currentSetScore)
+    object Deuce : GameResult()
 
-    data class PlayerOneAdvantage(
-        override val currentSetScore: SetScore,
-    ) : GameResult(currentSetScore)
+    object PlayerOneAdvantage : GameResult()
 
-    data class PlayerTwoAdvantage(
-        override val currentSetScore: SetScore,
-    ) : GameResult(currentSetScore)
+    object PlayerTwoAdvantage : GameResult()
 
-    // TODO ten finish mi się nie podoba:
-    // bierze completedSets tak jak w MatchResult
-    // musi przekazać SetScore do GameResult
-    class Finish(
-        val completedSets: CompletedSets,
-    ) : GameResult(completedSets.completedSets.last()) {
-        fun getWinner(): String = completedSets.getWinner()
-    }
+    object Finish : GameResult()
 
     abstract class GameState {
         abstract fun p1WonBall(gameResult: MatchResult): Pair<MatchResult, GameState>
@@ -119,7 +103,8 @@ class TennisGameStateTest {
                 currentSetScore.isForTieBreak() ->
                     MatchResult(
                         completedSets,
-                        TieBreak(currentSetScore, 0, 0),
+                        currentSetScore,
+                        TieBreak(0, 0),
                     ) to TieBreakGame()
 
                 currentSetScore.isSetCompleted() ->
@@ -130,7 +115,8 @@ class TennisGameStateTest {
                 else ->
                     MatchResult(
                         completedSets,
-                        NormalGameResult(GemScore.ZERO, GemScore.ZERO, currentSetScore),
+                        currentSetScore,
+                        NormalGameResult(GemScore.ZERO, GemScore.ZERO),
                     ) to NormalGame()
             }
 
@@ -139,42 +125,45 @@ class TennisGameStateTest {
                 completedSets.isMatchCompleted() ->
                     MatchResult(
                         completedSets = completedSets,
-                        Finish(completedSets),
+                        // TODO to jest trochę bezsensu
+                        currentSetScore = SetScore(0, 0),
+                        Finish,
                     ) to FinishState()
 
                 else ->
                     MatchResult(
                         completedSets,
-                        NormalGameResult(GemScore.ZERO, GemScore.ZERO, SetScore()),
+                        SetScore(),
+                        NormalGameResult(GemScore.ZERO, GemScore.ZERO),
                     ) to NormalGame()
             }
     }
 
     class PlayerOneAdvantageGame : GameState() {
         override fun p1WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            onGemWon(gameResult.completedSets, gameResult.currentSetResult.currentSetScore.playerOneWinsGem())
+            onGemWon(gameResult.completedSets, gameResult.currentSetScore.playerOneWinsGem())
 
         override fun p2WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            gameResult.copy(currentSetResult = Deuce(gameResult.currentSetResult.currentSetScore)) to DeuceGame()
+            gameResult.copy(currentGemResult = Deuce) to DeuceGame()
     }
 
     class PlayerTwoAdvantageGame : GameState() {
         override fun p1WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            gameResult.copy(currentSetResult = Deuce(gameResult.currentSetResult.currentSetScore)) to DeuceGame()
+            gameResult.copy(currentGemResult = Deuce) to DeuceGame()
 
         override fun p2WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
             onGemWon(
                 gameResult.completedSets,
-                gameResult.currentSetResult.currentSetScore.playerTwoWinsGem(),
+                gameResult.currentSetScore.playerTwoWinsGem(),
             )
     }
 
     class DeuceGame : GameState() {
         override fun p1WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            gameResult.copy(currentSetResult = PlayerOneAdvantage(gameResult.currentSetResult.currentSetScore)) to PlayerOneAdvantageGame()
+            gameResult.copy(currentGemResult = PlayerOneAdvantage) to PlayerOneAdvantageGame()
 
         override fun p2WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            gameResult.copy(currentSetResult = PlayerTwoAdvantage(gameResult.currentSetResult.currentSetScore)) to PlayerTwoAdvantageGame()
+            gameResult.copy(currentGemResult = PlayerTwoAdvantage) to PlayerTwoAdvantageGame()
     }
 
     class FinishState : GameState() {
@@ -187,21 +176,20 @@ class TennisGameStateTest {
         // TODO  p1WonBall i p2WonBall mnóstow duplikacji
 
         override fun p1WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            when (gameResult.currentSetResult) {
+            when (gameResult.currentGemResult) {
                 is NormalGameResult -> {
-                    val currentSetResult: NormalGameResult = gameResult.currentSetResult
+                    val currentSetResult: NormalGameResult = gameResult.currentGemResult
                     when (currentSetResult.playerOne) {
                         GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
                             val newScore = GemScore.entries[currentSetResult.playerOne.ordinal + 1]
                             if (isDeuce(newScore, currentSetResult.playerTwo)) {
-                                gameResult.copy(currentSetResult = Deuce(gameResult.currentSetResult.currentSetScore)) to DeuceGame()
+                                gameResult.copy(currentGemResult = Deuce) to DeuceGame()
                             } else {
                                 gameResult.copy(
-                                    currentSetResult =
+                                    currentGemResult =
                                         NormalGameResult(
                                             newScore,
                                             currentSetResult.playerTwo,
-                                            currentSetResult.currentSetScore,
                                         ),
                                 ) to this
                             }
@@ -210,7 +198,7 @@ class TennisGameStateTest {
                         GemScore.FORTY ->
                             onGemWon(
                                 gameResult.completedSets,
-                                currentSetResult.currentSetScore.playerOneWinsGem(),
+                                gameResult.currentSetScore.playerOneWinsGem(),
                             )
                     }
                 }
@@ -219,21 +207,20 @@ class TennisGameStateTest {
             }
 
         override fun p2WonBall(gameResult: MatchResult): Pair<MatchResult, GameState> =
-            when (gameResult.currentSetResult) {
+            when (gameResult.currentGemResult) {
                 is NormalGameResult -> {
-                    val currentSetResult: NormalGameResult = gameResult.currentSetResult
+                    val currentSetResult: NormalGameResult = gameResult.currentGemResult
                     when (currentSetResult.playerTwo) {
                         GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
                             val newScore = GemScore.entries[currentSetResult.playerTwo.ordinal + 1]
                             if (isDeuce(currentSetResult.playerOne, newScore)) {
-                                gameResult.copy(currentSetResult = Deuce(gameResult.currentSetResult.currentSetScore)) to DeuceGame()
+                                gameResult.copy(currentGemResult = Deuce) to DeuceGame()
                             } else {
                                 gameResult.copy(
-                                    currentSetResult =
+                                    currentGemResult =
                                         NormalGameResult(
                                             currentSetResult.playerOne,
                                             newScore,
-                                            currentSetResult.currentSetScore,
                                         ),
                                 ) to this
                             }
@@ -242,7 +229,7 @@ class TennisGameStateTest {
                         GemScore.FORTY ->
                             onGemWon(
                                 gameResult.completedSets,
-                                currentSetResult.currentSetScore.playerTwoWinsGem(),
+                                gameResult.currentSetScore.playerTwoWinsGem(),
                             )
                     }
                 }
@@ -275,15 +262,15 @@ class TennisGameStateTest {
             gameResult: MatchResult,
             tiesBreak: (TieBreak) -> TieBreak,
             gemWinnerIncreaser: (SetScore) -> SetScore,
-        ) = when (gameResult.currentSetResult) {
+        ) = when (gameResult.currentGemResult) {
             is TieBreak -> {
                 val updatedTiebreakResult =
-                    tiesBreak(gameResult.currentSetResult)
+                    tiesBreak(gameResult.currentGemResult)
 
                 if (updatedTiebreakResult.isCompleted()) {
-                    onGemWon(gameResult.completedSets, gemWinnerIncreaser(gameResult.currentSetResult.currentSetScore))
+                    onGemWon(gameResult.completedSets, gemWinnerIncreaser(gameResult.currentSetScore))
                 } else {
-                    gameResult.copy(currentSetResult = updatedTiebreakResult) to this
+                    gameResult.copy(currentGemResult = updatedTiebreakResult) to this
                 }
             }
 
@@ -355,7 +342,8 @@ class TennisGameStateTest {
         val initialState = TieBreakGame()
 
         val (gameResult, gameState) =
-            initGame(MatchResult().copy(currentSetResult = TieBreak(SetScore(6, 6), 5, 5)))
+            // TODO trzeba ustawić gemy na 6:6 a później wynik w Tiebreak - czy można to jakoś wymusić?
+            initGame(MatchResult().copy(currentSetScore = SetScore(6, 6), currentGemResult = TieBreak(5, 5)))
                 .flatMap { res -> p1WinsABall(res) }
                 .flatMap { res -> p1WinsABall(res) }
                 .flatMap { r2 -> p2WinsABall(r2) }
