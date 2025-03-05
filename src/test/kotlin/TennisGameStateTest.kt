@@ -273,6 +273,30 @@ class TennisGameStateTest {
 
     fun initGame(gameResult: MatchResult): State<GameState, MatchResult> = State { s -> Pair(gameResult, s) }
 
+    fun startBrandNewGame(): State<GameState, MatchResult> =
+        State { _ ->
+            Pair(
+                MatchResult(
+                    completedSets = CompletedSets(),
+                    currentSetScore = SetScore(0, 0),
+                    NormalGameResult(GameScore.ZERO, GameScore.ZERO),
+                ),
+                NormalGame(),
+            )
+        }
+
+    fun initTieBreakGame(
+        completedSets: CompletedSets = CompletedSets(),
+        tieBreak: TieBreak = TieBreak(0, 0),
+    ): State<GameState, MatchResult> =
+        State { _ ->
+            MatchResult(
+                completedSets,
+                currentSetScore = SetScore(6, 6),
+                currentGameResult = tieBreak,
+            ) to TieBreakGame()
+        }
+
     fun program1(gameResult: MatchResult): State<GameState, MatchResult> =
         p1WinsABall(gameResult)
             .flatMap { res1 ->
