@@ -351,6 +351,39 @@ class TennisGameStateTest {
     }
 
     @Test
+    fun startBrandNewGameTest() {
+        val (gameResult, gameState) =
+            startBrandNewGame()
+                .flatMap { res -> p1WinsABall(res) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+//                ten FinishState() będzie ignorowany...
+                .run(FinishState())
+
+        println("Final Result: $gameResult") // Output: 1
+        println("Final State: $gameState") // Output: 1
+    }
+
+    @Test
+    fun initTiebreak() {
+        val willBeIgnoredAtAll = NormalGame()
+
+        val (gameResult, gameState) =
+            initTieBreakGame()
+                .flatMap { res -> p1WinsABall(res) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .flatMap { r2 -> p2WinsABall(r2) }
+                .run(willBeIgnoredAtAll)
+
+        println("Final Result: $gameResult") // Output: 1
+        println("Final State: $gameState") // Output: 1
+    }
+
+    @Test
     fun testSetEndTiebreak() {
         val initialState = TieBreakGame()
 
@@ -365,5 +398,28 @@ class TennisGameStateTest {
 
         println("Final Result: $gameResult") // Output: 1
         println("Final State: $gameState") // Output: 1
+
+        // ODPOWIEDZ CHAT GPT
+        /*
+        This issue is not a problem with your design but rather a fundamental characteristic (or limitation) of the State Monad when used in scenarios like yours.
+
+            Why Does This Happen?
+            The State Monad is designed to separate state (S) from computation results (A).
+
+            This means you must always explicitly keep S and A in sync, which is not enforced by the monad itself.
+            If you forget to set both correctly (e.g., forgetting to update currentGameResult when setting TieBreakGame), the application state becomes invalid.
+            Is This a Design Problem or Just a Monad Quirk?
+            🔹 Not a problem with your design → You identified the issue correctly and solved it with the State Pattern.
+            🔹 A fundamental characteristic of the State Monad → Because it separates S (state) from A (result), it does not inherently guarantee consistency between them.
+
+            Why Does State Pattern Work Better for You?
+            In the State Pattern, GameState directly encodes the match state (e.g., TieBreakState includes set scores).
+            This naturally ensures consistency because state is not separated from game logic.
+            The State Monad, however, forces this separation, which requires extra effort to keep things correct.
+            Bottom Line
+            You are not doing anything wrong. The State Monad just does not enforce the guarantees you need—so the State Pattern is a better fit for your case.
+
+            If you want to stick with a monadic approach, you need additional structures (like wrapping GameState and MatchResult together), but at that point, it’s essentially mimicking the State Pattern anyway. 😃
+         */
     }
 }
