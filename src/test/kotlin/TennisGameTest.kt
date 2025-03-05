@@ -1,7 +1,7 @@
 import org.junit.jupiter.api.Test
 
 class TennisGameTest {
-    enum class GemScore {
+    enum class GameScore {
         ZERO,
         FIFTEEN,
         THIRTY,
@@ -12,9 +12,9 @@ class TennisGameTest {
         val playerOne: Int = 0,
         val playerTwo: Int = 0,
     ) {
-        fun playerOneWinsGem(): SetResult = SetResult(playerOne + 1, playerTwo)
+        fun playerOneWinsGame(): SetResult = SetResult(playerOne + 1, playerTwo)
 
-        fun playerTwoWinsGem(): SetResult = SetResult(playerOne, playerTwo + 1)
+        fun playerTwoWinsGame(): SetResult = SetResult(playerOne, playerTwo + 1)
 
         fun isTieBreak(): Boolean = playerTwo == 6 && playerOne == 6
 
@@ -38,28 +38,28 @@ class TennisGameTest {
     data class MatchResult(
         val completedSets: CompletedSets = CompletedSets(),
         val currentSet: SetResult = SetResult(0, 0),
-        val currentGem: GemResult = GemPointsResult(GemScore.ZERO, GemScore.ZERO),
+        val currentGame: GameResult = GamePointsResult(GameScore.ZERO, GameScore.ZERO),
     )
 
-    sealed class GemResult
+    sealed class GameResult
 
-    data class GemPointsResult(
-        val playerOne: GemScore,
-        val playerTwo: GemScore,
-    ) : GemResult()
+    data class GamePointsResult(
+        val playerOne: GameScore,
+        val playerTwo: GameScore,
+    ) : GameResult()
 
-    object Deuce : GemResult()
+    object Deuce : GameResult()
 
     data class TieBreak(
         val playerOne: Int,
         val playerTwo: Int,
-    ) : GemResult()
+    ) : GameResult()
 
-    object PlayerOneAdvantage : GemResult()
+    object PlayerOneAdvantage : GameResult()
 
-    object PlayerTwoAdvantage : GemResult()
+    object PlayerTwoAdvantage : GameResult()
 
-    object Finish : GemResult()
+    object Finish : GameResult()
 
     abstract class GameState {
         abstract fun playerOneWonABall(): GameState
@@ -69,7 +69,7 @@ class TennisGameTest {
         abstract fun getResult(): MatchResult
     }
 
-    class GemWonState(
+    class GameWonState(
         private val completedSets: CompletedSets,
         private val currentSet: SetResult,
     ) : GameState() {
@@ -90,8 +90,8 @@ class TennisGameTest {
                     NormalGameState(
                         completedSets.append(currentSet),
                         SetResult(0, 0),
-                        GemScore.ZERO,
-                        GemScore.ZERO,
+                        GameScore.ZERO,
+                        GameScore.ZERO,
                     )
             }
 
@@ -113,7 +113,7 @@ class TennisGameTest {
         private val completedSets: CompletedSets,
         private val currentSet: SetResult,
     ) : GameState() {
-        override fun playerOneWonABall(): GameState = GemWonState(completedSets, currentSet.playerOneWinsGem())
+        override fun playerOneWonABall(): GameState = GameWonState(completedSets, currentSet.playerOneWinsGame())
 
         override fun playerTwoWonABall(): GameState = DeuceState(completedSets, currentSet)
 
@@ -131,7 +131,7 @@ class TennisGameTest {
     ) : GameState() {
         override fun playerOneWonABall(): GameState = DeuceState(completedSets, currentSet)
 
-        override fun playerTwoWonABall(): GameState = GemWonState(completedSets, currentSet.playerTwoWinsGem())
+        override fun playerTwoWonABall(): GameState = GameWonState(completedSets, currentSet.playerTwoWinsGame())
 
         override fun getResult(): MatchResult =
             MatchResult(
@@ -159,14 +159,14 @@ class TennisGameTest {
     ) : GameState() {
         override fun playerOneWonABall(): GameState =
             if (playerOne >= 6 && playerOne - playerTwo >= 1) {
-                GemWonState(completedSets, SetResult(7, 6))
+                GameWonState(completedSets, SetResult(7, 6))
             } else {
                 TieBreakState(completedSets, playerOne + 1, playerTwo)
             }
 
         override fun playerTwoWonABall(): GameState =
             if (playerTwo >= 6 && playerTwo - playerOne >= 1) {
-                GemWonState(completedSets, SetResult(6, 7))
+                GameWonState(completedSets, SetResult(6, 7))
             } else {
                 TieBreakState(completedSets, playerOne, playerTwo + 1)
             }
@@ -193,13 +193,13 @@ class TennisGameTest {
     class NormalGameState(
         private val completedSets: CompletedSets,
         private val currentSet: SetResult,
-        private val playerOne: GemScore = GemScore.ZERO,
-        private val playerTwo: GemScore = GemScore.ZERO,
+        private val playerOne: GameScore = GameScore.ZERO,
+        private val playerTwo: GameScore = GameScore.ZERO,
     ) : GameState() {
         override fun playerOneWonABall(): GameState =
             when (playerOne) {
-                GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
-                    val newScore = GemScore.entries[playerOne.ordinal + 1]
+                GameScore.ZERO, GameScore.FIFTEEN, GameScore.THIRTY -> {
+                    val newScore = GameScore.entries[playerOne.ordinal + 1]
                     if (isDeuce(newScore, playerTwo)) {
                         DeuceState(completedSets, currentSet)
                     } else {
@@ -207,18 +207,18 @@ class TennisGameTest {
                     }
                 }
 
-                GemScore.FORTY -> GemWonState(completedSets, currentSet.playerOneWinsGem())
+                GameScore.FORTY -> GameWonState(completedSets, currentSet.playerOneWinsGame())
             }
 
         private fun isDeuce(
-            playerOne: GemScore,
-            playerTwo: GemScore,
-        ): Boolean = playerOne == GemScore.FORTY && playerTwo == GemScore.FORTY
+            playerOne: GameScore,
+            playerTwo: GameScore,
+        ): Boolean = playerOne == GameScore.FORTY && playerTwo == GameScore.FORTY
 
         override fun playerTwoWonABall(): GameState =
             when (playerTwo) {
-                GemScore.ZERO, GemScore.FIFTEEN, GemScore.THIRTY -> {
-                    val newScore = GemScore.entries[playerTwo.ordinal + 1]
+                GameScore.ZERO, GameScore.FIFTEEN, GameScore.THIRTY -> {
+                    val newScore = GameScore.entries[playerTwo.ordinal + 1]
                     if (isDeuce(playerOne, newScore)) {
                         DeuceState(completedSets, currentSet)
                     } else {
@@ -226,19 +226,19 @@ class TennisGameTest {
                     }
                 }
 
-                GemScore.FORTY -> GemWonState(completedSets, currentSet.playerTwoWinsGem())
+                GameScore.FORTY -> GameWonState(completedSets, currentSet.playerTwoWinsGame())
             }
 
         override fun getResult(): MatchResult =
             MatchResult(
                 completedSets,
                 currentSet,
-                GemPointsResult(playerOne, playerTwo),
+                GamePointsResult(playerOne, playerTwo),
             )
     }
 
     class TennisGame(
-        private val gameState: GameState = NormalGameState(CompletedSets(), SetResult(), GemScore.ZERO, GemScore.ZERO),
+        private val gameState: GameState = NormalGameState(CompletedSets(), SetResult(), GameScore.ZERO, GameScore.ZERO),
     ) {
         fun playerOneWonABall(): TennisGame {
             val newState = gameState.playerOneWonABall()
