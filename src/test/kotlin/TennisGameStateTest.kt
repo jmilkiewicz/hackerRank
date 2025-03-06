@@ -1,3 +1,7 @@
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers
+import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 
 class TennisGameStateTest {
@@ -306,40 +310,61 @@ class TennisGameStateTest {
             ) to DeuceGame()
         }
 
-    fun program1(gameResult: MatchResult): State<GameState, MatchResult> =
-        p1WinsABall(gameResult)
-            .flatMap { res1 ->
-                p1WinsABall(res1)
-            }.flatMap { res2 ->
-                p2WinsABall(res2)
-            }
-
-    fun program2(gameResult: MatchResult): State<GameState, MatchResult> =
-        p2WinsABall(gameResult)
-            .flatMap { res1 ->
-                p2WinsABall(res1)
-            }.flatMap { res2 ->
-                p1WinsABall(res2)
-            }
-
     @Test
-    fun testSetEnd() {
+    fun forkTest() {
         val initialState = NormalGame()
 
-        val (result, finalState) =
-            program1(
-                MatchResult(),
-            ).run(initialState)
+        val initialMatchResult = MatchResult()
+        val (intermediateResult, intermediateState) =
+            initGame(
+                initialMatchResult,
+            ).flatMap { p1WinsABall(it) }
+                .flatMap { p1WinsABall(it) }
+                .flatMap { p1WinsABall(it) }
+                .run(initialState)
 
-        val (gameResultStep2, gameStateStep2) = program2(result).run(finalState)
+        val (forkResult1, forkState1) =
+            p1WinsABall(intermediateResult).run(intermediateState)
 
-        println("Final Result: $gameResultStep2") // Output: 1
-        println("Final State: $gameStateStep2") // Output: 1
+        assertThat(
+            forkResult1,
+            equalTo(
+                initialMatchResult.copy(
+                    currentSetScore = SetScore(1, 0),
+                    currentGameResult = NormalGameResult(GameScore.ZERO, GameScore.ZERO),
+                ),
+            ),
+        )
 
-        val (gameResultStep1, gameStateStep1) = program1(result).run(finalState)
+        assertThat(
+            forkState1,
+            Matchers.instanceOf(NormalGame::class.java),
+        )
 
-        println("Final Result: $gameResultStep1") // Output: 1
-        println("Final State: $gameStateStep1") // Output: 1
+        val (forkResult2, forkState2) =
+            p2WinsABall(intermediateResult)
+                .flatMap { p2WinsABall(it) }
+                .run(intermediateState)
+
+        assertThat(
+            forkResult2,
+            equalTo(
+                initialMatchResult.copy(
+                    currentGameResult =
+                        NormalGameResult(
+                            GameScore.FORTY,
+                            GameScore.THIRTY,
+                        ),
+                ),
+            ),
+        )
+
+        assertThat(
+            forkState2,
+            Matchers.instanceOf(NormalGame::class.java),
+        )
+
+        assertThat(forkResult1, not(equalTo(forkResult2)))
     }
 
     @Test
