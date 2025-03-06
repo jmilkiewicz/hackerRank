@@ -294,6 +294,18 @@ class TennisGameStateTest {
             ) to TieBreakGame()
         }
 
+    fun initDeuce(
+        completedSets: CompletedSets = CompletedSets(),
+        currentSetScore: SetScore = SetScore(0, 0),
+    ): State<GameState, MatchResult> =
+        State { _ ->
+            MatchResult(
+                completedSets,
+                currentSetScore = currentSetScore,
+                currentGameResult = Deuce,
+            ) to DeuceGame()
+        }
+
     fun program1(gameResult: MatchResult): State<GameState, MatchResult> =
         p1WinsABall(gameResult)
             .flatMap { res1 ->
