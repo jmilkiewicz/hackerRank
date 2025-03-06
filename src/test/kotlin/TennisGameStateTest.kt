@@ -1,6 +1,6 @@
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.instanceOf
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 
@@ -289,12 +289,15 @@ class TennisGameStateTest {
             )
         }
 
-    fun initTieBreakGame(completedSets: CompletedSets = CompletedSets()): State<GameState, MatchResult> =
+    fun initTieBreakGame(
+        completedSets: CompletedSets = CompletedSets(),
+        tieBreak: TieBreak = TieBreak(0, 0),
+    ): State<GameState, MatchResult> =
         State { _ ->
             MatchResult(
                 completedSets,
                 currentSetScore = SetScore(6, 6),
-                currentGameResult = TieBreak(0, 0),
+                currentGameResult = tieBreak,
             ) to TieBreakGame()
         }
 
@@ -338,7 +341,7 @@ class TennisGameStateTest {
 
         assertThat(
             forkState1,
-            Matchers.instanceOf(NormalGame::class.java),
+            instanceOf(NormalGame::class.java),
         )
 
         val (forkResult2, forkState2) =
@@ -361,99 +364,140 @@ class TennisGameStateTest {
 
         assertThat(
             forkState2,
-            Matchers.instanceOf(NormalGame::class.java),
+            instanceOf(NormalGame::class.java),
         )
 
         assertThat(forkResult1, not(equalTo(forkResult2)))
     }
 
     @Test
-    fun testSetEnd3() {
-        val initialState = NormalGame()
+    fun deuceTest() {
+        val willBeIgnored = NormalGame()
 
-        val (gameResult, gameState) =
-            initGame(MatchResult())
-                .flatMap { res -> p1WinsABall(res) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .run(initialState)
+        val completedSets = CompletedSets()
+        val currentSetScore = SetScore(0, 0)
+        val (matchResult, gameState) =
+            initDeuce(completedSets, currentSetScore)
+                .flatMap { p1WinsABall(it) }
+                .run(willBeIgnored)
 
-        println("Final Result: $gameResult") // Output: 1
-        println("Final State: $gameState") // Output: 1
+        assertThat(
+            matchResult,
+            equalTo(
+                MatchResult(
+                    completedSets = completedSets,
+                    currentSetScore = currentSetScore,
+                    currentGameResult = PlayerOneAdvantage,
+                ),
+            ),
+        )
+
+        assertThat(
+            gameState,
+            instanceOf(PlayerOneAdvantageGame::class.java),
+        )
     }
 
     @Test
     fun startBrandNewGameTest() {
-        val (gameResult, gameState) =
+        val (matchResult, gameState) =
             startBrandNewGame()
                 .flatMap { res -> p1WinsABall(res) }
                 .flatMap { r2 -> p2WinsABall(r2) }
                 .flatMap { r2 -> p2WinsABall(r2) }
                 .flatMap { r2 -> p2WinsABall(r2) }
                 .flatMap { r2 -> p2WinsABall(r2) }
-//                ten FinishState() będzie ignorowany...
+//                this FinishState() will be ignored
                 .run(FinishState())
 
-        println("Final Result: $gameResult") // Output: 1
-        println("Final State: $gameState") // Output: 1
+        assertThat(
+            matchResult,
+            equalTo(
+                MatchResult(
+                    completedSets = CompletedSets(emptyList()),
+                    currentSetScore = SetScore(0, 1),
+                    currentGameResult =
+                        NormalGameResult(
+                            GameScore.ZERO,
+                            GameScore.ZERO,
+                        ),
+                ),
+            ),
+        )
     }
 
     @Test
-    fun initTiebreak() {
+    fun initTiebreakTest() {
         val willBeIgnoredAtAll = NormalGame()
 
-        val (gameResult, gameState) =
-            initTieBreakGame()
-                .flatMap { res -> p1WinsABall(res) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
+        val completedSets = CompletedSets()
+        val (matchResult, gameState) =
+            initTieBreakGame(completedSets = completedSets)
+                .flatMap { p1WinsABall(it) }
+                .flatMap { p1WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
                 .run(willBeIgnoredAtAll)
 
-        println("Final Result: $gameResult") // Output: 1
-        println("Final State: $gameState") // Output: 1
+        assertThat(
+            matchResult,
+            equalTo(
+                MatchResult(
+                    completedSets = completedSets,
+                    currentSetScore = SetScore(6, 6),
+                    currentGameResult =
+                        TieBreak(2, 4),
+                ),
+            ),
+        )
+
+        assertThat(
+            gameState,
+            instanceOf(
+                TieBreakGame::class.java,
+            ),
+        )
     }
 
     @Test
     fun testSetEndTiebreak() {
-        val initialState = TieBreakGame()
+        val tieBreak = TieBreak(5, 5)
 
-        val (gameResult, gameState) =
-            // TODO trzeba ustawić gemy na 6:6 a później wynik w Tiebreak - czy można to jakoś wymusić?
-            initGame(MatchResult().copy(currentSetScore = SetScore(6, 6), currentGameResult = TieBreak(5, 5)))
-                .flatMap { res -> p1WinsABall(res) }
-                .flatMap { res -> p1WinsABall(res) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .flatMap { r2 -> p2WinsABall(r2) }
-                .run(initialState)
+        // TODO Very error prone: in current set we need to set 6:6, set TieBreak for a current game, and set initial State to TieBreakGame()
+        initGame(MatchResult().copy(currentSetScore = SetScore(6, 6), currentGameResult = tieBreak))
+            .flatMap { p1WinsABall(it) }
+            .flatMap { p2WinsABall(it) }
+            .flatMap { p2WinsABall(it) }
+            .flatMap { p2WinsABall(it) }
+            .run(TieBreakGame())
 
-        println("Final Result: $gameResult") // Output: 1
-        println("Final State: $gameState") // Output: 1
+        val (matchResult, gameState) =
+            initTieBreakGame(completedSets = CompletedSets(), tieBreak = tieBreak)
+                .flatMap { p1WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
+                .flatMap { p2WinsABall(it) }
+                .run(FinishState())
 
-        // ODPOWIEDZ CHAT GPT
-        /*
-        This issue is not a problem with your design but rather a fundamental characteristic (or limitation) of the State Monad when used in scenarios like yours.
+        assertThat(
+            matchResult,
+            equalTo(
+                MatchResult(
+                    completedSets = CompletedSets().append(SetScore(6, 7)),
+                    currentSetScore = SetScore(0, 0),
+                    currentGameResult =
+                        NormalGameResult(GameScore.ZERO, GameScore.ZERO),
+                ),
+            ),
+        )
 
-            Why Does This Happen?
-            The State Monad is designed to separate state (S) from computation results (A).
-
-            This means you must always explicitly keep S and A in sync, which is not enforced by the monad itself.
-            If you forget to set both correctly (e.g., forgetting to update currentGameResult when setting TieBreakGame), the application state becomes invalid.
-            Is This a Design Problem or Just a Monad Quirk?
-            🔹 Not a problem with your design → You identified the issue correctly and solved it with the State Pattern.
-            🔹 A fundamental characteristic of the State Monad → Because it separates S (state) from A (result), it does not inherently guarantee consistency between them.
-
-            Why Does State Pattern Work Better for You?
-            In the State Pattern, GameState directly encodes the match state (e.g., TieBreakState includes set scores).
-            This naturally ensures consistency because state is not separated from game logic.
-            The State Monad, however, forces this separation, which requires extra effort to keep things correct.
-            Bottom Line
-            You are not doing anything wrong. The State Monad just does not enforce the guarantees you need—so the State Pattern is a better fit for your case.
-
-            If you want to stick with a monadic approach, you need additional structures (like wrapping GameState and MatchResult together), but at that point, it’s essentially mimicking the State Pattern anyway. 😃
-         */
+        assertThat(
+            gameState,
+            instanceOf(
+                NormalGame::class.java,
+            ),
+        )
     }
 }

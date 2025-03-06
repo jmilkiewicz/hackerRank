@@ -1,5 +1,3 @@
-import org.junit.jupiter.api.Test
-
 class TennisGameTest {
     enum class GameScore {
         ZERO,
@@ -251,72 +249,5 @@ class TennisGameTest {
         }
 
         fun getResult(): MatchResult = this.gameState.getResult()
-    }
-
-    @Test
-    fun test() {
-        val game = TennisGame()
-        val result =
-            game
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerTwoWonABall()
-                .playerTwoWonABall()
-                .playerTwoWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .getResult()
-        println(result)
-    }
-
-    @Test
-    fun testEnterTiebrek() {
-        val game =
-            TennisGame(
-                NormalGameState(CompletedSets(), SetResult(5, 6)),
-            )
-        val result =
-            game
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .getResult()
-        println(result)
-    }
-
-    @Test
-    fun testFinishTiebrekEnd() {
-        val game =
-            TennisGame(
-                TieBreakState(CompletedSets(), 3, 6),
-            )
-
-        val result =
-            game
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .getResult()
-        println(result)
-    }
-
-    @Test
-    fun testSetEnd() {
-        val game = TennisGame(NormalGameState(CompletedSets(), SetResult(6, 5)))
-        val result =
-            game
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .playerOneWonABall()
-                .getResult()
-        println(result)
     }
 }
