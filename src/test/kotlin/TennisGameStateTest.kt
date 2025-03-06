@@ -285,15 +285,12 @@ class TennisGameStateTest {
             )
         }
 
-    fun initTieBreakGame(
-        completedSets: CompletedSets = CompletedSets(),
-        tieBreak: TieBreak = TieBreak(0, 0),
-    ): State<GameState, MatchResult> =
+    fun initTieBreakGame(completedSets: CompletedSets = CompletedSets()): State<GameState, MatchResult> =
         State { _ ->
             MatchResult(
                 completedSets,
                 currentSetScore = SetScore(6, 6),
-                currentGameResult = tieBreak,
+                currentGameResult = TieBreak(0, 0),
             ) to TieBreakGame()
         }
 
