@@ -1,13 +1,14 @@
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.Test
-import java.util.*
-
-
-
+import java.util.Collections.emptyList
+import java.util.Collections.emptySet
+import java.util.EnumSet
 
 class Sortowanie {
-    enum class Cloth(val cloth: String) {
+    enum class Cloth(
+        val cloth: String,
+    ) {
         SHOES("shoes"),
         SOCKS("socks"),
         GLOVES("gloves"),
@@ -32,18 +33,17 @@ class Sortowanie {
         }
     }
 
-    val dees = mapOf(
-        Cloth.SOCKS to EnumSet.of(Cloth.SHOES),
-        Cloth.GLOVES to emptySet<Cloth>(),
-        Cloth.JACKET to emptySet<Cloth>(),
-        Cloth.SHOES to emptySet<Cloth>(),
-        Cloth.TROUSERS to EnumSet.of(Cloth.SHOES),
-        Cloth.PANTS to EnumSet.of(Cloth.TROUSERS),
-        Cloth.SHIRT to EnumSet.of(Cloth.VEST),
-        Cloth.VEST to EnumSet.of(Cloth.JACKET),
-    )
-
-
+    val dees =
+        mapOf(
+            Cloth.SOCKS to EnumSet.of(Cloth.SHOES),
+            Cloth.GLOVES to emptySet<Cloth>(),
+            Cloth.JACKET to emptySet<Cloth>(),
+            Cloth.SHOES to emptySet<Cloth>(),
+            Cloth.TROUSERS to EnumSet.of(Cloth.SHOES),
+            Cloth.PANTS to EnumSet.of(Cloth.TROUSERS),
+            Cloth.SHIRT to EnumSet.of(Cloth.VEST),
+            Cloth.VEST to EnumSet.of(Cloth.JACKET),
+        )
 
     @Test
     fun name() {
